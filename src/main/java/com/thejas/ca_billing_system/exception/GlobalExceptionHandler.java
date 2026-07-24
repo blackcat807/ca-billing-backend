@@ -19,4 +19,9 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<String> handleIllegalState(IllegalStateException ex) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.PRECONDITION_REQUIRED);
+    }
+
 }

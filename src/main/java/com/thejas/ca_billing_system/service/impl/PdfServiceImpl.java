@@ -4,9 +4,12 @@ import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import com.thejas.ca_billing_system.entity.Invoice;
 import com.thejas.ca_billing_system.entity.InvoiceItem;
+import com.thejas.ca_billing_system.entity.PracticeProfile;
 import com.thejas.ca_billing_system.exception.ResourceNotFoundException;
 import com.thejas.ca_billing_system.repository.InvoiceItemRepository;
 import com.thejas.ca_billing_system.repository.InvoiceRepository;
+import com.thejas.ca_billing_system.repository.PracticeProfileRepository;
+import com.thejas.ca_billing_system.security.SecurityHelper;
 import com.thejas.ca_billing_system.service.PdfService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,8 +29,10 @@ public class PdfServiceImpl implements PdfService {
     private static final Color LIGHT_GREY = new Color(230, 230, 230);
     private static final Color MID_GREY   = new Color(160, 160, 160);
 
-    private final InvoiceRepository     invoiceRepository;
-    private final InvoiceItemRepository invoiceItemRepository;
+    private final InvoiceRepository         invoiceRepository;
+    private final InvoiceItemRepository     invoiceItemRepository;
+    private final PracticeProfileRepository practiceProfileRepository;
+    private final SecurityHelper            securityHelper;
 
     @Override
     public ByteArrayInputStream generateInvoicePdf(Long invoiceId) {
@@ -37,6 +42,11 @@ public class PdfServiceImpl implements PdfService {
 
         List<InvoiceItem> items = invoiceItemRepository.findByInvoiceInvoiceId(invoiceId);
 
+        PracticeProfile profile = practiceProfileRepository
+                .findByUserId(securityHelper.currentUser().getId())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Set up your Practice Profile before generating invoices."));
+
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         Document doc = new Document(PageSize.A4, 45, 45, 45, 45);
 
@@ -44,7 +54,7 @@ public class PdfServiceImpl implements PdfService {
             PdfWriter.getInstance(doc, out);
             doc.open();
 
-            // ── Fonts ─────────────────────────────────────────────────────────
+            // ── Fonts ─────────────────────────────────────────────────
             BaseFont bf       = BaseFont.createFont(BaseFont.HELVETICA,         BaseFont.CP1252, false);
             BaseFont bfBold   = BaseFont.createFont(BaseFont.HELVETICA_BOLD,    BaseFont.CP1252, false);
             BaseFont bfItalic = BaseFont.createFont(BaseFont.HELVETICA_OBLIQUE, BaseFont.CP1252, false);
@@ -65,11 +75,7 @@ public class PdfServiceImpl implements PdfService {
             Font fSig     = new Font(bfItalic,   9, Font.NORMAL, BLACK);
             Font fSigLbl  = new Font(bf,          8, Font.NORMAL, BLACK);
 
-            // ══════════════════════════════════════════════════════════════════
-            // OUTER BORDER — drawn as a single-cell table wrapping everything
-            // ══════════════════════════════════════════════════════════════════
-
-            // ── HEADER: name+address left | BILL centred right ────────────────
+            // ── HEADER: name+address left | BILL centred right ─────────
             PdfPTable hdr = new PdfPTable(2);
             hdr.setWidthPercentage(100);
             hdr.setWidths(new float[]{ 60f, 40f });
@@ -79,12 +85,14 @@ public class PdfServiceImpl implements PdfService {
             lc.setBorder(Rectangle.BOTTOM | Rectangle.RIGHT);
             lc.setBorderColor(BLACK);
             lc.setPadding(10f);
-            lc.addElement(new Paragraph("Jayaram Bhat, B.Com., CA.Int.", fName));
+            lc.addElement(new Paragraph(profile.getFirmName(), fName));
             lc.addElement(gap(3f));
-            lc.addElement(new Paragraph("Tax Practitioner", fQual));
-            lc.addElement(new Paragraph("Near Rotary School, 2nd Cross,", fAddr));
-            lc.addElement(new Paragraph("Rajendra Nagara, Shimoga - 577201", fAddr));
-            lc.addElement(new Paragraph("Phone : 9448218871", fAddr));
+            if (notBlank(profile.getAddressLine1()))
+                lc.addElement(new Paragraph(profile.getAddressLine1(), fAddr));
+            if (notBlank(profile.getAddressLine2()))
+                lc.addElement(new Paragraph(profile.getAddressLine2(), fAddr));
+            if (notBlank(profile.getPhone()))
+                lc.addElement(new Paragraph("Phone : " + profile.getPhone(), fAddr));
             hdr.addCell(lc);
 
             PdfPCell rc = new PdfPCell();
@@ -114,7 +122,7 @@ public class PdfServiceImpl implements PdfService {
             hdr.addCell(rc);
             doc.add(hdr);
 
-            // ── M/s line ─────────────────────────────────────────────────────
+            // ── M/s line ─────────────────────────────────────────────
             PdfPTable msTable = new PdfPTable(1);
             msTable.setWidthPercentage(100);
             msTable.setSpacingAfter(6f);
@@ -126,7 +134,7 @@ public class PdfServiceImpl implements PdfService {
             msTable.addCell(msCell);
             doc.add(msTable);
 
-            // ── Services table ────────────────────────────────────────────────
+            // ── Services table ───────────────────────────────────────
             if (!items.isEmpty()) {
                 PdfPTable table = new PdfPTable(2);
                 table.setWidthPercentage(100);
@@ -149,7 +157,7 @@ public class PdfServiceImpl implements PdfService {
                 doc.add(table);
             }
 
-            // ── Totals ────────────────────────────────────────────────────────
+            // ── Totals ───────────────────────────────────────────────
             BigDecimal total = invoice.getTotalAmount() != null
                     ? invoice.getTotalAmount() : BigDecimal.ZERO;
             String totalStr = RS + "  " + formatAmount(total);
@@ -181,7 +189,7 @@ public class PdfServiceImpl implements PdfService {
 
             doc.add(totals);
 
-            // ── Bank details ──────────────────────────────────────────────────
+            // ── Bank details ─────────────────────────────────────────
             PdfPTable bankTable = new PdfPTable(1);
             bankTable.setWidthPercentage(100);
             bankTable.setSpacingAfter(18f);
@@ -198,18 +206,18 @@ public class PdfServiceImpl implements PdfService {
             bankGrid.setWidthPercentage(100);
             bankGrid.setWidths(new float[]{ 34f, 33f, 33f });
 
-            bankGrid.addCell(bankDetailCell("Account Name",   "Jayaram Bhat",    fBankLbl, fBank));
-            bankGrid.addCell(bankDetailCell("Account Number", "30101624761",     fBankLbl, fBank));
-            bankGrid.addCell(bankDetailCell("Account Type",   "Savings (SB)",    fBankLbl, fBank));
-            bankGrid.addCell(bankDetailCell("Bank",           "State Bank of India", fBankLbl, fBank));
-            bankGrid.addCell(bankDetailCell("IFSC Code",      "SBIN0016447",     fBankLbl, fBank));
-            bankGrid.addCell(bankDetailCell("Branch",         "Shivamogga City", fBankLbl, fBank));
+            bankGrid.addCell(bankDetailCell("Account Name",   nz(profile.getBankAccountName()), fBankLbl, fBank));
+            bankGrid.addCell(bankDetailCell("Account Number", nz(profile.getBankAccountNumber()), fBankLbl, fBank));
+            bankGrid.addCell(bankDetailCell("Account Type",   nz(profile.getBankAccountType()), fBankLbl, fBank));
+            bankGrid.addCell(bankDetailCell("Bank",           nz(profile.getBankName()), fBankLbl, fBank));
+            bankGrid.addCell(bankDetailCell("IFSC Code",      nz(profile.getBankIfsc()), fBankLbl, fBank));
+            bankGrid.addCell(bankDetailCell("Branch",         nz(profile.getBankBranch()), fBankLbl, fBank));
 
             bankOuter.addElement(bankGrid);
             bankTable.addCell(bankOuter);
             doc.add(bankTable);
 
-            // ── Authorised Signatory ──────────────────────────────────────────
+            // ── Authorised Signatory ─────────────────────────────────
             PdfPTable sigTable = new PdfPTable(2);
             sigTable.setWidthPercentage(100);
             sigTable.setWidths(new float[]{ 50f, 50f });
@@ -226,7 +234,9 @@ public class PdfServiceImpl implements PdfService {
             sigCell.setMinimumHeight(70f);
             sigCell.setVerticalAlignment(Element.ALIGN_BOTTOM);
 
-            Paragraph forLine = new Paragraph("For  Jayaram Bhat", fSig);
+            String signatory = notBlank(profile.getSignatoryName())
+                    ? profile.getSignatoryName() : profile.getFirmName();
+            Paragraph forLine = new Paragraph("For  " + signatory, fSig);
             forLine.setAlignment(Element.ALIGN_CENTER);
             sigCell.addElement(forLine);
             sigCell.addElement(gap(3f));
@@ -247,7 +257,15 @@ public class PdfServiceImpl implements PdfService {
         return new ByteArrayInputStream(out.toByteArray());
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Helpers ──────────────────────────────────────────────────────
+
+    private boolean notBlank(String s) {
+        return s != null && !s.trim().isEmpty();
+    }
+
+    private String nz(String s) {
+        return s == null ? "" : s;
+    }
 
     private PdfPCell headerCell(String text, Font font, int align) {
         PdfPCell cell = new PdfPCell(new Phrase(text, font));
@@ -296,23 +314,21 @@ public class PdfServiceImpl implements PdfService {
         return String.format("%.2f", amount);
     }
 
-    // ── Amount to words (Indian system) ──────────────────────────────────────
-
     private static final String[] ONES = {
-        "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
-        "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
-        "Seventeen", "Eighteen", "Nineteen"
+            "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+            "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+            "Seventeen", "Eighteen", "Nineteen"
     };
     private static final String[] TENS = {
-        "", "", "Twenty", "Thirty", "Forty", "Fifty",
-        "Sixty", "Seventy", "Eighty", "Ninety"
+            "", "", "Twenty", "Thirty", "Forty", "Fifty",
+            "Sixty", "Seventy", "Eighty", "Ninety"
     };
 
     private String toWords(BigDecimal amount) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) return "Zero Rupees";
         long rupees = amount.longValue();
         int  paise  = amount.remainder(BigDecimal.ONE)
-                            .multiply(new BigDecimal(100)).intValue();
+                .multiply(new BigDecimal(100)).intValue();
         StringBuilder sb = new StringBuilder(convertIndian(rupees)).append(" Rupees");
         if (paise > 0) sb.append(" and ").append(convertBelow100(paise)).append(" Paise");
         return sb.toString();
