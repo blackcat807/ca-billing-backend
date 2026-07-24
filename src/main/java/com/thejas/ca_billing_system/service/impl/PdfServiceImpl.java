@@ -54,7 +54,6 @@ public class PdfServiceImpl implements PdfService {
             PdfWriter.getInstance(doc, out);
             doc.open();
 
-            // ── Fonts ─────────────────────────────────────────────────
             BaseFont bf       = BaseFont.createFont(BaseFont.HELVETICA,         BaseFont.CP1252, false);
             BaseFont bfBold   = BaseFont.createFont(BaseFont.HELVETICA_BOLD,    BaseFont.CP1252, false);
             BaseFont bfItalic = BaseFont.createFont(BaseFont.HELVETICA_OBLIQUE, BaseFont.CP1252, false);
@@ -75,7 +74,6 @@ public class PdfServiceImpl implements PdfService {
             Font fSig     = new Font(bfItalic,   9, Font.NORMAL, BLACK);
             Font fSigLbl  = new Font(bf,          8, Font.NORMAL, BLACK);
 
-            // ── HEADER: name+address left | BILL centred right ─────────
             PdfPTable hdr = new PdfPTable(2);
             hdr.setWidthPercentage(100);
             hdr.setWidths(new float[]{ 60f, 40f });
@@ -122,7 +120,6 @@ public class PdfServiceImpl implements PdfService {
             hdr.addCell(rc);
             doc.add(hdr);
 
-            // ── M/s line ─────────────────────────────────────────────
             PdfPTable msTable = new PdfPTable(1);
             msTable.setWidthPercentage(100);
             msTable.setSpacingAfter(6f);
@@ -134,7 +131,6 @@ public class PdfServiceImpl implements PdfService {
             msTable.addCell(msCell);
             doc.add(msTable);
 
-            // ── Services table ───────────────────────────────────────
             if (!items.isEmpty()) {
                 PdfPTable table = new PdfPTable(2);
                 table.setWidthPercentage(100);
@@ -157,7 +153,6 @@ public class PdfServiceImpl implements PdfService {
                 doc.add(table);
             }
 
-            // ── Totals ───────────────────────────────────────────────
             BigDecimal total = invoice.getTotalAmount() != null
                     ? invoice.getTotalAmount() : BigDecimal.ZERO;
             String totalStr = RS + "  " + formatAmount(total);
@@ -189,7 +184,6 @@ public class PdfServiceImpl implements PdfService {
 
             doc.add(totals);
 
-            // ── Bank details ─────────────────────────────────────────
             PdfPTable bankTable = new PdfPTable(1);
             bankTable.setWidthPercentage(100);
             bankTable.setSpacingAfter(18f);
@@ -217,7 +211,6 @@ public class PdfServiceImpl implements PdfService {
             bankTable.addCell(bankOuter);
             doc.add(bankTable);
 
-            // ── Authorised Signatory ─────────────────────────────────
             PdfPTable sigTable = new PdfPTable(2);
             sigTable.setWidthPercentage(100);
             sigTable.setWidths(new float[]{ 50f, 50f });
@@ -256,8 +249,6 @@ public class PdfServiceImpl implements PdfService {
 
         return new ByteArrayInputStream(out.toByteArray());
     }
-
-    // ── Helpers ──────────────────────────────────────────────────────
 
     private boolean notBlank(String s) {
         return s != null && !s.trim().isEmpty();
