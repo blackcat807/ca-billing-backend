@@ -3,9 +3,11 @@ package com.thejas.ca_billing_system.service.impl;
 import com.thejas.ca_billing_system.dto.ServiceRequest;
 import com.thejas.ca_billing_system.dto.ServiceResponse;
 import com.thejas.ca_billing_system.entity.Service;
+import com.thejas.ca_billing_system.entity.User;
 import com.thejas.ca_billing_system.exception.ResourceAlreadyExistsException;
 import com.thejas.ca_billing_system.exception.ResourceNotFoundException;
 import com.thejas.ca_billing_system.repository.ServiceRepository;
+import com.thejas.ca_billing_system.security.SecurityHelper;
 import com.thejas.ca_billing_system.service.ServiceService;
 import lombok.RequiredArgsConstructor;
 
@@ -17,19 +19,20 @@ import java.util.stream.Collectors;
 public class ServiceServiceImpl implements ServiceService {
 
     private final ServiceRepository serviceRepository;
+    private final SecurityHelper    securityHelper;
 
     @Override
     public ServiceResponse createService(ServiceRequest request) {
+        String username = securityHelper.currentUsername();
+        User   user     = securityHelper.currentUser();
+        String name     = request.getServiceName().trim();
 
-        String serviceName = request.getServiceName().trim();
-
-        if (serviceRepository.existsByServiceNameIgnoreCase(serviceName)) {
-            throw new ResourceAlreadyExistsException(
-                    "Service already exists with name: " + serviceName);
-        }
+        if (serviceRepository.existsByServiceNameIgnoreCaseAndUserUsername(name, username))
+            throw new ResourceAlreadyExistsException("Service already exists: " + name);
 
         Service service = Service.builder()
-                .serviceName(serviceName)
+                .user(user)
+                .serviceName(name)
                 .active(request.getActive() != null ? request.getActive() : true)
                 .displayOrder(request.getDisplayOrder() != null ? request.getDisplayOrder() : 0)
                 .build();
@@ -39,65 +42,45 @@ public class ServiceServiceImpl implements ServiceService {
 
     @Override
     public List<ServiceResponse> getAllServices() {
-        return serviceRepository.findByActiveTrueOrderByDisplayOrderAsc()
-                .stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        return serviceRepository
+                .findByUserUsernameOrderByDisplayOrderAsc(securityHelper.currentUsername())
+                .stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
     @Override
-    public ServiceResponse getServiceById(Long serviceId) {
-
-        Service service = serviceRepository.findById(serviceId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Service not found with id: " + serviceId));
-
-        return mapToResponse(service);
+    public ServiceResponse getServiceById(Long id) {
+        return mapToResponse(findOwnedService(id));
     }
 
     @Override
-    public ServiceResponse updateService(Long serviceId, ServiceRequest request) {
-
-        Service service = serviceRepository.findById(serviceId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Service not found with id: " + serviceId));
-
-        String serviceName = request.getServiceName().trim();
-
-        serviceRepository.findByServiceNameIgnoreCase(serviceName)
-                .ifPresent(existing -> {
-                    if (!existing.getServiceId().equals(serviceId)) {
-                        throw new ResourceAlreadyExistsException(
-                                "Service already exists with name: " + serviceName);
-                    }
-                });
-
-        service.setServiceName(serviceName);
-        service.setActive(request.getActive() != null ? request.getActive() : true);
-        service.setDisplayOrder(request.getDisplayOrder() != null ? request.getDisplayOrder() : 0);
-
+    public ServiceResponse updateService(Long id, ServiceRequest request) {
+        Service service = findOwnedService(id);
+        service.setServiceName(request.getServiceName().trim());
+        service.setActive(request.getActive() != null ? request.getActive() : service.getActive());
+        service.setDisplayOrder(request.getDisplayOrder() != null ? request.getDisplayOrder() : service.getDisplayOrder());
         return mapToResponse(serviceRepository.save(service));
     }
 
     @Override
-    public void deleteService(Long serviceId) {
-
-        Service service = serviceRepository.findById(serviceId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Service not found with id: " + serviceId));
-
-        service.setActive(false);
-
-        serviceRepository.save(service);
+    public void deleteService(Long id) {
+        serviceRepository.delete(findOwnedService(id));
+        
     }
 
-    private ServiceResponse mapToResponse(Service service) {
+    private Service findOwnedService(Long id) {
+        Service s = serviceRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found: " + id));
+        if (!s.getUser().getUsername().equals(securityHelper.currentUsername()))
+            throw new ResourceNotFoundException("Service not found: " + id);
+        return s;
+    }
 
-        return ServiceResponse.builder()
-                .serviceId(service.getServiceId())
-                .serviceName(service.getServiceName())
-                .active(service.getActive())
-                .displayOrder(service.getDisplayOrder())
-                .build();
+    private ServiceResponse mapToResponse(Service s) {
+        ServiceResponse r = new ServiceResponse();
+        r.setServiceId(s.getServiceId());
+        r.setServiceName(s.getServiceName());
+        r.setActive(s.getActive());
+        r.setDisplayOrder(s.getDisplayOrder());
+        return r;
     }
 }

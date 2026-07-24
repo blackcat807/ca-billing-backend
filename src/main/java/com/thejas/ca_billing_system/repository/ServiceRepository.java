@@ -7,10 +7,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ServiceRepository extends JpaRepository<Service, Long> {
-
-    Optional<Service> findByServiceNameIgnoreCase(String serviceName);
-
-    boolean existsByServiceNameIgnoreCase(String serviceName);
-
-    List<Service> findByActiveTrueOrderByDisplayOrderAsc();
+    List<Service> findByUserUsernameOrderByDisplayOrderAsc(String username);
+    List<Service> findByUserUsernameAndActiveTrueOrderByDisplayOrderAsc(String username);
+    boolean existsByServiceNameIgnoreCaseAndUserUsername(String name, String username);
+    Optional<Service> findByServiceNameIgnoreCaseAndUserUsername(String name, String username);
 }
