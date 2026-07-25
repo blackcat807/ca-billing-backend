@@ -34,6 +34,10 @@ public class PdfServiceImpl implements PdfService {
     private final PracticeProfileRepository practiceProfileRepository;
     private final SecurityHelper            securityHelper;
 
+    private BaseFont bf, bfBold, bfItalic;
+    private Font fName, fQual, fAddr, fBillHd, fBillSub, fMs, fThHead, fTbBody,
+            fTotal, fWords, fLbl, fBank, fBankLbl, fSig, fSigLbl, fCopyLbl;
+
     @Override
     public ByteArrayInputStream generateInvoicePdf(Long invoiceId) {
 
@@ -48,215 +52,54 @@ public class PdfServiceImpl implements PdfService {
                         "Set up your Practice Profile before generating invoices."));
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        Document doc = new Document(PageSize.A4, 30, 30, 30, 30);
+        Document doc = new Document(PageSize.A4, 30, 30, 25, 25);
 
         try {
             PdfWriter.getInstance(doc, out);
             doc.open();
 
-            BaseFont bf       = BaseFont.createFont(BaseFont.HELVETICA,         BaseFont.CP1252, false);
-            BaseFont bfBold   = BaseFont.createFont(BaseFont.HELVETICA_BOLD,    BaseFont.CP1252, false);
-            BaseFont bfItalic = BaseFont.createFont(BaseFont.HELVETICA_OBLIQUE, BaseFont.CP1252, false);
+            bf       = BaseFont.createFont(BaseFont.HELVETICA,         BaseFont.CP1252, false);
+            bfBold   = BaseFont.createFont(BaseFont.HELVETICA_BOLD,    BaseFont.CP1252, false);
+            bfItalic = BaseFont.createFont(BaseFont.HELVETICA_OBLIQUE, BaseFont.CP1252, false);
 
-            Font fName    = new Font(bfBold,    16, Font.NORMAL, BLACK);
-            Font fQual    = new Font(bf,          9, Font.NORMAL, BLACK);
-            Font fAddr    = new Font(bf,          9, Font.NORMAL, BLACK);
-            Font fBillHd  = new Font(bfBold,    10, Font.NORMAL, BLACK);
-            Font fBillSub = new Font(bf,          9, Font.NORMAL, BLACK);
-            Font fMs      = new Font(bfBold,    10, Font.NORMAL, BLACK);
-            Font fThHead  = new Font(bfBold,     9, Font.NORMAL, BLACK);
-            Font fTbBody  = new Font(bf,          9, Font.NORMAL, BLACK);
-            Font fTotal   = new Font(bfBold,    10, Font.NORMAL, BLACK);
-            Font fWords   = new Font(bfBold,     9, Font.NORMAL, BLACK);
-            Font fLbl     = new Font(bf,          8, Font.NORMAL, BLACK);
-            Font fBank    = new Font(bf,          8, Font.NORMAL, BLACK);
-            Font fBankLbl = new Font(bfBold,     8, Font.NORMAL, BLACK);
-            Font fSig     = new Font(bfItalic,   9, Font.NORMAL, BLACK);
-            Font fSigLbl  = new Font(bf,          8, Font.NORMAL, BLACK);
+            fName    = new Font(bfBold,    15, Font.NORMAL, BLACK);
+            fQual    = new Font(bf,          9, Font.NORMAL, BLACK);
+            fAddr    = new Font(bf,          8, Font.NORMAL, BLACK);
+            fBillHd  = new Font(bfBold,     9, Font.NORMAL, BLACK);
+            fBillSub = new Font(bf,          8, Font.NORMAL, BLACK);
+            fMs      = new Font(bfBold,     9, Font.NORMAL, BLACK);
+            fThHead  = new Font(bfBold,     8, Font.NORMAL, BLACK);
+            fTbBody  = new Font(bf,          8, Font.NORMAL, BLACK);
+            fTotal   = new Font(bfBold,     9, Font.NORMAL, BLACK);
+            fWords   = new Font(bfBold,     8, Font.NORMAL, BLACK);
+            fLbl     = new Font(bf,          7, Font.NORMAL, BLACK);
+            fBank    = new Font(bf,          7, Font.NORMAL, BLACK);
+            fBankLbl = new Font(bfBold,     7, Font.NORMAL, BLACK);
+            fSig     = new Font(bfItalic,   8, Font.NORMAL, BLACK);
+            fSigLbl  = new Font(bf,          7, Font.NORMAL, BLACK);
+            fCopyLbl = new Font(bfItalic,   8, Font.NORMAL, MID_GREY);
 
-            // ── Outer bordered wrapper: everything goes inside this one cell ──
-            PdfPTable outer = new PdfPTable(1);
-            outer.setWidthPercentage(100);
+            PdfPTable page = new PdfPTable(1);
+            page.setWidthPercentage(100);
 
-            PdfPCell outerCell = new PdfPCell();
-            outerCell.setBorder(Rectangle.BOX);
-            outerCell.setBorderColor(BLACK);
-            outerCell.setBorderWidth(1.2f);
-            outerCell.setPadding(0f);
+            PdfPCell copy1 = new PdfPCell(buildInvoiceBlock(invoice, items, profile, "Original Copy"));
+            copy1.setBorder(Rectangle.NO_BORDER);
+            copy1.setPadding(0f);
+            page.addCell(copy1);
 
-            // ── Header: name+address left | BILL centred right ──
-            PdfPTable hdr = new PdfPTable(2);
-            hdr.setWidthPercentage(100);
-            hdr.setWidths(new float[]{ 60f, 40f });
+            PdfPCell dividerCell = new PdfPCell(new Phrase(" "));
+            dividerCell.setBorder(Rectangle.TOP);
+            dividerCell.setBorderColor(MID_GREY);
+            dividerCell.setBorderWidthTop(1f);
+            dividerCell.setFixedHeight(18f);
+            page.addCell(dividerCell);
 
-            PdfPCell lc = new PdfPCell();
-            lc.setBorder(Rectangle.BOTTOM | Rectangle.RIGHT);
-            lc.setBorderColor(BLACK);
-            lc.setPadding(14f);
-            lc.addElement(new Paragraph(profile.getFirmName(), fName));
-            lc.addElement(gap(3f));
-            if (notBlank(profile.getAddressLine1()))
-                lc.addElement(new Paragraph(profile.getAddressLine1(), fAddr));
-            if (notBlank(profile.getAddressLine2()))
-                lc.addElement(new Paragraph(profile.getAddressLine2(), fAddr));
-            if (notBlank(profile.getPhone()))
-                lc.addElement(new Paragraph("Phone : " + profile.getPhone(), fAddr));
-            if (notBlank(profile.getEmail()))
-                lc.addElement(new Paragraph("Email : " + profile.getEmail(), fAddr));
-            hdr.addCell(lc);
+            PdfPCell copy2 = new PdfPCell(buildInvoiceBlock(invoice, items, profile, "Duplicate Copy"));
+            copy2.setBorder(Rectangle.NO_BORDER);
+            copy2.setPadding(0f);
+            page.addCell(copy2);
 
-            PdfPCell rc = new PdfPCell();
-            rc.setBorder(Rectangle.BOTTOM);
-            rc.setBorderColor(BLACK);
-            rc.setPadding(14f);
-            rc.setHorizontalAlignment(Element.ALIGN_CENTER);
-            rc.setVerticalAlignment(Element.ALIGN_MIDDLE);
-
-            Paragraph pBill = new Paragraph("BILL", fBillHd);
-            pBill.setAlignment(Element.ALIGN_CENTER);
-            rc.addElement(pBill);
-            rc.addElement(gap(5f));
-
-            String rawNum = invoice.getInvoiceNumber() != null
-                    ? invoice.getInvoiceNumber().replace("INV-", "") : "";
-            Paragraph pNo = new Paragraph("No.   " + rawNum, fBillSub);
-            pNo.setAlignment(Element.ALIGN_CENTER);
-            rc.addElement(pNo);
-
-            String dateStr = formatDate(invoice.getInvoiceDate() != null
-                    ? invoice.getInvoiceDate().toString() : "");
-            Paragraph pDate = new Paragraph("Date.   " + dateStr, fBillSub);
-            pDate.setAlignment(Element.ALIGN_CENTER);
-            rc.addElement(pDate);
-
-            hdr.addCell(rc);
-            outerCell.addElement(hdr);
-
-            // ── M/s line ──
-            PdfPTable msTable = new PdfPTable(1);
-            msTable.setWidthPercentage(100);
-            PdfPCell msCell = new PdfPCell();
-            msCell.setBorder(Rectangle.BOTTOM);
-            msCell.setBorderColor(BLACK);
-            msCell.setPadding(14f);
-            msCell.addElement(new Paragraph("M/s.   " + invoice.getClient().getClientName(), fMs));
-            msTable.addCell(msCell);
-            outerCell.addElement(msTable);
-
-            // ── Services table ──
-            if (!items.isEmpty()) {
-                PdfPTable table = new PdfPTable(2);
-                table.setWidthPercentage(100);
-                table.setWidths(new float[]{ 75f, 25f });
-                table.setHeaderRows(1);
-
-                PdfPCell th1 = headerCell("DESCRIPTION OF SERVICE", fThHead, Element.ALIGN_LEFT);
-                PdfPCell th2 = headerCell("AMOUNT", fThHead, Element.ALIGN_RIGHT);
-                table.addCell(th1);
-                table.addCell(th2);
-
-                int num = 1;
-                for (InvoiceItem item : items) {
-                    String label  = num++ + ".   " + item.getServiceName();
-                    String amount = RS + "  " + formatAmount(item.getAmount());
-                    table.addCell(bodyCell(label,  fTbBody, Element.ALIGN_LEFT));
-                    table.addCell(bodyCell(amount, fTbBody, Element.ALIGN_RIGHT));
-                }
-                outerCell.addElement(table);
-            } else {
-                PdfPTable emptyTable = new PdfPTable(1);
-                emptyTable.setWidthPercentage(100);
-                PdfPCell emptyCell = new PdfPCell(new Phrase("No services listed", fTbBody));
-                emptyCell.setBorder(Rectangle.BOX);
-                emptyCell.setBorderColor(MID_GREY);
-                emptyCell.setPadding(14f);
-                emptyCell.setHorizontalAlignment(Element.ALIGN_CENTER);
-                emptyTable.addCell(emptyCell);
-                outerCell.addElement(emptyTable);
-            }
-
-            outerCell.addElement(gap(10f));
-
-            // ── Totals ──
-            BigDecimal total = invoice.getTotalAmount() != null
-                    ? invoice.getTotalAmount() : BigDecimal.ZERO;
-            String totalStr = RS + "  " + formatAmount(total);
-            String inWords  = toWords(total) + " Only";
-
-            PdfPTable totals = new PdfPTable(2);
-            totals.setWidthPercentage(100);
-            totals.setWidths(new float[]{ 58f, 42f });
-
-            PdfPCell wordsCell = new PdfPCell();
-            wordsCell.setBorder(Rectangle.BOX);
-            wordsCell.setBorderColor(BLACK);
-            wordsCell.setPadding(14f);
-            wordsCell.addElement(new Paragraph("Rs. in Words :", fLbl));
-            wordsCell.addElement(gap(3f));
-            wordsCell.addElement(new Paragraph(inWords, fWords));
-            totals.addCell(wordsCell);
-
-            PdfPCell totalCell = new PdfPCell();
-            totalCell.setBorder(Rectangle.BOX);
-            totalCell.setBorderColor(BLACK);
-            totalCell.setPadding(14f);
-            totalCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-            Paragraph pTotal = new Paragraph("TOTAL :   " + totalStr, fTotal);
-            pTotal.setAlignment(Element.ALIGN_RIGHT);
-            totalCell.addElement(pTotal);
-            totals.addCell(totalCell);
-
-            outerCell.addElement(totals);
-            outerCell.addElement(gap(10f));
-
-            // ── Bank details ──
-            PdfPTable bankTable = new PdfPTable(1);
-            bankTable.setWidthPercentage(100);
-
-            PdfPCell bankOuter = new PdfPCell();
-            bankOuter.setBorder(Rectangle.BOX);
-            bankOuter.setBorderColor(BLACK);
-            bankOuter.setPadding(14f);
-
-            bankOuter.addElement(new Paragraph("Bank Account Details", fBankLbl));
-            bankOuter.addElement(gap(4f));
-
-            PdfPTable bankGrid = new PdfPTable(1);
-            bankGrid.setWidthPercentage(100);
-            bankGrid.addCell(bankDetailCell("Account Name", nz(profile.getBankAccountName()), fBankLbl, fBank));
-            bankOuter.addElement(bankGrid);
-
-            bankTable.addCell(bankOuter);
-            outerCell.addElement(bankTable);
-            outerCell.addElement(gap(20f));
-
-            // ── Authorised Signatory ──
-            PdfPTable sigTable = new PdfPTable(2);
-            sigTable.setWidthPercentage(100);
-            sigTable.setWidths(new float[]{ 50f, 50f });
-
-            PdfPCell leftBlank = new PdfPCell(new Phrase(" "));
-            leftBlank.setBorder(Rectangle.NO_BORDER);
-            leftBlank.setMinimumHeight(90f);
-            sigTable.addCell(leftBlank);
-
-            PdfPCell sigCell = new PdfPCell();
-            sigCell.setBorder(Rectangle.BOX);
-            sigCell.setBorderColor(BLACK);
-            sigCell.setPadding(14f);
-            sigCell.setMinimumHeight(90f);
-            sigCell.setVerticalAlignment(Element.ALIGN_BOTTOM);
-
-            Paragraph sigLabel = new Paragraph("Authorised Signatory", fSigLbl);
-            sigLabel.setAlignment(Element.ALIGN_CENTER);
-            sigCell.addElement(sigLabel);
-
-            sigTable.addCell(sigCell);
-            outerCell.addElement(sigTable);
-
-            outer.addCell(outerCell);
-            doc.add(outer);
-
+            doc.add(page);
             doc.close();
 
         } catch (Exception e) {
@@ -264,6 +107,193 @@ public class PdfServiceImpl implements PdfService {
         }
 
         return new ByteArrayInputStream(out.toByteArray());
+    }
+
+    private PdfPTable buildInvoiceBlock(Invoice invoice, List<InvoiceItem> items,
+                                        PracticeProfile profile, String copyLabel) {
+
+        PdfPTable wrapper = new PdfPTable(1);
+        wrapper.setWidthPercentage(100);
+
+        PdfPCell outerCell = new PdfPCell();
+        outerCell.setBorder(Rectangle.BOX);
+        outerCell.setBorderColor(BLACK);
+        outerCell.setBorderWidth(1f);
+        outerCell.setPadding(0f);
+
+        Paragraph copyTag = new Paragraph(copyLabel, fCopyLbl);
+        copyTag.setAlignment(Element.ALIGN_RIGHT);
+        PdfPTable copyTagTable = new PdfPTable(1);
+        copyTagTable.setWidthPercentage(100);
+        PdfPCell copyTagCell = new PdfPCell(copyTag);
+        copyTagCell.setBorder(Rectangle.NO_BORDER);
+        copyTagCell.setPadding(4f);
+        copyTagCell.setPaddingRight(10f);
+        copyTagTable.addCell(copyTagCell);
+        outerCell.addElement(copyTagTable);
+
+        PdfPTable hdr = new PdfPTable(2);
+        hdr.setWidthPercentage(100);
+        hdr.setWidths(new float[]{ 60f, 40f });
+
+        PdfPCell lc = new PdfPCell();
+        lc.setBorder(Rectangle.TOP | Rectangle.BOTTOM | Rectangle.RIGHT);
+        lc.setBorderColor(BLACK);
+        lc.setPadding(10f);
+        lc.addElement(new Paragraph(profile.getFirmName(), fName));
+        lc.addElement(gap(2f));
+        if (notBlank(profile.getAddressLine1()))
+            lc.addElement(new Paragraph(profile.getAddressLine1(), fAddr));
+        if (notBlank(profile.getAddressLine2()))
+            lc.addElement(new Paragraph(profile.getAddressLine2(), fAddr));
+        if (notBlank(profile.getPhone()))
+            lc.addElement(new Paragraph("Phone : " + profile.getPhone(), fAddr));
+        if (notBlank(profile.getEmail()))
+            lc.addElement(new Paragraph("Email : " + profile.getEmail(), fAddr));
+        hdr.addCell(lc);
+
+        PdfPCell rc = new PdfPCell();
+        rc.setBorder(Rectangle.TOP | Rectangle.BOTTOM);
+        rc.setBorderColor(BLACK);
+        rc.setPadding(10f);
+        rc.setHorizontalAlignment(Element.ALIGN_CENTER);
+        rc.setVerticalAlignment(Element.ALIGN_MIDDLE);
+
+        Paragraph pBill = new Paragraph("BILL", fBillHd);
+        pBill.setAlignment(Element.ALIGN_CENTER);
+        rc.addElement(pBill);
+        rc.addElement(gap(4f));
+
+        String rawNum = invoice.getInvoiceNumber() != null
+                ? invoice.getInvoiceNumber().replace("INV-", "") : "";
+        Paragraph pNo = new Paragraph("No.   " + rawNum, fBillSub);
+        pNo.setAlignment(Element.ALIGN_CENTER);
+        rc.addElement(pNo);
+
+        String dateStr = formatDate(invoice.getInvoiceDate() != null
+                ? invoice.getInvoiceDate().toString() : "");
+        Paragraph pDate = new Paragraph("Date.   " + dateStr, fBillSub);
+        pDate.setAlignment(Element.ALIGN_CENTER);
+        rc.addElement(pDate);
+
+        hdr.addCell(rc);
+        outerCell.addElement(hdr);
+
+        PdfPTable msTable = new PdfPTable(1);
+        msTable.setWidthPercentage(100);
+        PdfPCell msCell = new PdfPCell();
+        msCell.setBorder(Rectangle.BOTTOM);
+        msCell.setBorderColor(BLACK);
+        msCell.setPadding(10f);
+        msCell.addElement(new Paragraph("M/s.   " + invoice.getClient().getClientName(), fMs));
+        msTable.addCell(msCell);
+        outerCell.addElement(msTable);
+
+        if (!items.isEmpty()) {
+            PdfPTable table = new PdfPTable(2);
+            table.setWidthPercentage(100);
+            table.setWidths(new float[]{ 75f, 25f });
+            table.setHeaderRows(1);
+
+            PdfPCell th1 = headerCell("DESCRIPTION OF SERVICE", fThHead, Element.ALIGN_LEFT);
+            PdfPCell th2 = headerCell("AMOUNT", fThHead, Element.ALIGN_RIGHT);
+            table.addCell(th1);
+            table.addCell(th2);
+
+            int num = 1;
+            for (InvoiceItem item : items) {
+                String label  = num++ + ".   " + item.getServiceName();
+                String amount = RS + "  " + formatAmount(item.getAmount());
+                table.addCell(bodyCell(label,  fTbBody, Element.ALIGN_LEFT));
+                table.addCell(bodyCell(amount, fTbBody, Element.ALIGN_RIGHT));
+            }
+            outerCell.addElement(table);
+        } else {
+            PdfPTable emptyTable = new PdfPTable(1);
+            emptyTable.setWidthPercentage(100);
+            PdfPCell emptyCell = new PdfPCell(new Phrase("No services listed", fTbBody));
+            emptyCell.setBorder(Rectangle.BOX);
+            emptyCell.setBorderColor(MID_GREY);
+            emptyCell.setPadding(10f);
+            emptyCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            emptyTable.addCell(emptyCell);
+            outerCell.addElement(emptyTable);
+        }
+
+        BigDecimal total = invoice.getTotalAmount() != null
+                ? invoice.getTotalAmount() : BigDecimal.ZERO;
+        String totalStr = RS + "  " + formatAmount(total);
+        String inWords  = toWords(total) + " Only";
+
+        PdfPTable totals = new PdfPTable(2);
+        totals.setWidthPercentage(100);
+        totals.setWidths(new float[]{ 58f, 42f });
+
+        PdfPCell wordsCell = new PdfPCell();
+        wordsCell.setBorder(Rectangle.BOX);
+        wordsCell.setBorderColor(BLACK);
+        wordsCell.setPadding(10f);
+        wordsCell.addElement(new Paragraph("Rs. in Words :", fLbl));
+        wordsCell.addElement(gap(2f));
+        wordsCell.addElement(new Paragraph(inWords, fWords));
+        totals.addCell(wordsCell);
+
+        PdfPCell totalCell = new PdfPCell();
+        totalCell.setBorder(Rectangle.BOX);
+        totalCell.setBorderColor(BLACK);
+        totalCell.setPadding(10f);
+        totalCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        Paragraph pTotal = new Paragraph("TOTAL :   " + totalStr, fTotal);
+        pTotal.setAlignment(Element.ALIGN_RIGHT);
+        totalCell.addElement(pTotal);
+        totals.addCell(totalCell);
+
+        outerCell.addElement(totals);
+
+        PdfPTable bankTable = new PdfPTable(1);
+        bankTable.setWidthPercentage(100);
+
+        PdfPCell bankOuter = new PdfPCell();
+        bankOuter.setBorder(Rectangle.BOX);
+        bankOuter.setBorderColor(BLACK);
+        bankOuter.setPadding(10f);
+
+        bankOuter.addElement(new Paragraph("Bank Account Details", fBankLbl));
+        bankOuter.addElement(gap(3f));
+
+        PdfPTable bankGrid = new PdfPTable(1);
+        bankGrid.setWidthPercentage(100);
+        bankGrid.addCell(bankDetailCell("Account Name", nz(profile.getBankAccountName()), fBankLbl, fBank));
+        bankOuter.addElement(bankGrid);
+
+        bankTable.addCell(bankOuter);
+        outerCell.addElement(bankTable);
+
+        PdfPTable sigTable = new PdfPTable(2);
+        sigTable.setWidthPercentage(100);
+        sigTable.setWidths(new float[]{ 50f, 50f });
+
+        PdfPCell leftBlank = new PdfPCell(new Phrase(" "));
+        leftBlank.setBorder(Rectangle.NO_BORDER);
+        leftBlank.setMinimumHeight(55f);
+        sigTable.addCell(leftBlank);
+
+        PdfPCell sigCell = new PdfPCell();
+        sigCell.setBorder(Rectangle.BOX);
+        sigCell.setBorderColor(BLACK);
+        sigCell.setPadding(10f);
+        sigCell.setMinimumHeight(55f);
+        sigCell.setVerticalAlignment(Element.ALIGN_BOTTOM);
+
+        Paragraph sigLabel = new Paragraph("Authorised Signatory", fSigLbl);
+        sigLabel.setAlignment(Element.ALIGN_CENTER);
+        sigCell.addElement(sigLabel);
+
+        sigTable.addCell(sigCell);
+        outerCell.addElement(sigTable);
+
+        wrapper.addCell(outerCell);
+        return wrapper;
     }
 
     private boolean notBlank(String s) {
@@ -277,7 +307,7 @@ public class PdfServiceImpl implements PdfService {
     private PdfPCell headerCell(String text, Font font, int align) {
         PdfPCell cell = new PdfPCell(new Phrase(text, font));
         cell.setBackgroundColor(LIGHT_GREY);
-        cell.setPadding(6f);
+        cell.setPadding(5f);
         cell.setBorder(Rectangle.BOX);
         cell.setBorderColor(BLACK);
         cell.setHorizontalAlignment(align);
@@ -286,7 +316,7 @@ public class PdfServiceImpl implements PdfService {
 
     private PdfPCell bodyCell(String text, Font font, int align) {
         PdfPCell cell = new PdfPCell(new Phrase(text, font));
-        cell.setPadding(6f);
+        cell.setPadding(5f);
         cell.setBorder(Rectangle.BOX);
         cell.setBorderColor(MID_GREY);
         cell.setHorizontalAlignment(align);
@@ -296,7 +326,7 @@ public class PdfServiceImpl implements PdfService {
     private PdfPCell bankDetailCell(String label, String value, Font labelFont, Font valFont) {
         PdfPCell cell = new PdfPCell();
         cell.setBorder(Rectangle.NO_BORDER);
-        cell.setPadding(3f);
+        cell.setPadding(2f);
         cell.addElement(new Paragraph(label, labelFont));
         cell.addElement(new Paragraph(value, valFont));
         return cell;
