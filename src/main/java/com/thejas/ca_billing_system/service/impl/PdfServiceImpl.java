@@ -54,9 +54,9 @@ public class PdfServiceImpl implements PdfService {
             PdfWriter.getInstance(doc, out);
             doc.open();
 
-            BaseFont bf       = BaseFont.createFont(BaseFont.HELVETICA,         BaseFont.CP1252, false);
-            BaseFont bfBold   = BaseFont.createFont(BaseFont.HELVETICA_BOLD,    BaseFont.CP1252, false);
-            BaseFont bfItalic = BaseFont.createFont(BaseFont.HELVETICA_OBLIQUE, BaseFont.CP1252, false);
+            BaseFont bf       = BaseFont.createFont(BaseFont.HELVETICA,         BaseFont.IDENTITY_H, false);
+            BaseFont bfBold   = BaseFont.createFont(BaseFont.HELVETICA_BOLD,    BaseFont.IDENTITY_H, false);
+            BaseFont bfItalic = BaseFont.createFont(BaseFont.HELVETICA_OBLIQUE, BaseFont.IDENTITY_H, false);
 
             Font fName    = new Font(bfBold,    16, Font.NORMAL, BLACK);
             Font fQual    = new Font(bf,          9, Font.NORMAL, BLACK);
@@ -91,6 +91,8 @@ public class PdfServiceImpl implements PdfService {
                 lc.addElement(new Paragraph(profile.getAddressLine2(), fAddr));
             if (notBlank(profile.getPhone()))
                 lc.addElement(new Paragraph("Phone : " + profile.getPhone(), fAddr));
+            if (notBlank(profile.getEmail()))
+                lc.addElement(new Paragraph("Email : " + profile.getEmail(), fAddr));
             hdr.addCell(lc);
 
             PdfPCell rc = new PdfPCell();
@@ -193,19 +195,13 @@ public class PdfServiceImpl implements PdfService {
             bankOuter.setBorderColor(BLACK);
             bankOuter.setPadding(8f);
 
-            bankOuter.addElement(new Paragraph("Bank Details", fBankLbl));
+            bankOuter.addElement(new Paragraph("Bank Account Details", fBankLbl));
             bankOuter.addElement(gap(4f));
 
-            PdfPTable bankGrid = new PdfPTable(3);
+            PdfPTable bankGrid = new PdfPTable(1);
             bankGrid.setWidthPercentage(100);
-            bankGrid.setWidths(new float[]{ 34f, 33f, 33f });
 
-            bankGrid.addCell(bankDetailCell("Account Name",   nz(profile.getBankAccountName()), fBankLbl, fBank));
-            bankGrid.addCell(bankDetailCell("Account Number", nz(profile.getBankAccountNumber()), fBankLbl, fBank));
-            bankGrid.addCell(bankDetailCell("Account Type",   nz(profile.getBankAccountType()), fBankLbl, fBank));
-            bankGrid.addCell(bankDetailCell("Bank",           nz(profile.getBankName()), fBankLbl, fBank));
-            bankGrid.addCell(bankDetailCell("IFSC Code",      nz(profile.getBankIfsc()), fBankLbl, fBank));
-            bankGrid.addCell(bankDetailCell("Branch",         nz(profile.getBankBranch()), fBankLbl, fBank));
+            bankGrid.addCell(bankDetailCell("Account Name", nz(profile.getBankAccountName()), fBankLbl, fBank));
 
             bankOuter.addElement(bankGrid);
             bankTable.addCell(bankOuter);
@@ -226,13 +222,6 @@ public class PdfServiceImpl implements PdfService {
             sigCell.setPadding(8f);
             sigCell.setMinimumHeight(70f);
             sigCell.setVerticalAlignment(Element.ALIGN_BOTTOM);
-
-            String signatory = notBlank(profile.getSignatoryName())
-                    ? profile.getSignatoryName() : profile.getFirmName();
-            Paragraph forLine = new Paragraph("For  " + signatory, fSig);
-            forLine.setAlignment(Element.ALIGN_CENTER);
-            sigCell.addElement(forLine);
-            sigCell.addElement(gap(3f));
 
             Paragraph sigLabel = new Paragraph("Authorised Signatory", fSigLbl);
             sigLabel.setAlignment(Element.ALIGN_CENTER);
