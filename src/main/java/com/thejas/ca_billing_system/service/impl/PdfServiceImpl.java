@@ -24,7 +24,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PdfServiceImpl implements PdfService {
 
-    private static final String RS = "\u20B9";
+    private static final String RS = "Rs.";
     private static final Color BLACK      = Color.BLACK;
     private static final Color LIGHT_GREY = new Color(230, 230, 230);
     private static final Color MID_GREY   = new Color(160, 160, 160);
@@ -54,14 +54,14 @@ public class PdfServiceImpl implements PdfService {
             PdfWriter.getInstance(doc, out);
             doc.open();
 
-            BaseFont bf       = BaseFont.createFont(BaseFont.HELVETICA,         BaseFont.IDENTITY_H, false);
-            BaseFont bfBold   = BaseFont.createFont(BaseFont.HELVETICA_BOLD,    BaseFont.IDENTITY_H, false);
-            BaseFont bfItalic = BaseFont.createFont(BaseFont.HELVETICA_OBLIQUE, BaseFont.IDENTITY_H, false);
+            BaseFont bf       = BaseFont.createFont(BaseFont.HELVETICA,         BaseFont.CP1252, false);
+            BaseFont bfBold   = BaseFont.createFont(BaseFont.HELVETICA_BOLD,    BaseFont.CP1252, false);
+            BaseFont bfItalic = BaseFont.createFont(BaseFont.HELVETICA_OBLIQUE, BaseFont.CP1252, false);
 
             Font fName    = new Font(bfBold,    16, Font.NORMAL, BLACK);
             Font fQual    = new Font(bf,          9, Font.NORMAL, BLACK);
             Font fAddr    = new Font(bf,          9, Font.NORMAL, BLACK);
-            Font fBillHd  = new Font(bfBold,    20, Font.NORMAL, BLACK);
+            Font fBillHd  = new Font(bfBold,    10, Font.NORMAL, BLACK);
             Font fBillSub = new Font(bf,          9, Font.NORMAL, BLACK);
             Font fMs      = new Font(bfBold,    10, Font.NORMAL, BLACK);
             Font fThHead  = new Font(bfBold,     9, Font.NORMAL, BLACK);
