@@ -48,7 +48,7 @@ public class PdfServiceImpl implements PdfService {
                         "Set up your Practice Profile before generating invoices."));
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        Document doc = new Document(PageSize.A4, 45, 45, 45, 45);
+        Document doc = new Document(PageSize.A4, 30, 30, 30, 30);
 
         try {
             PdfWriter.getInstance(doc, out);
@@ -74,10 +74,20 @@ public class PdfServiceImpl implements PdfService {
             Font fSig     = new Font(bfItalic,   9, Font.NORMAL, BLACK);
             Font fSigLbl  = new Font(bf,          8, Font.NORMAL, BLACK);
 
+            // ── Outer bordered wrapper: everything goes inside this one cell ──
+            PdfPTable outer = new PdfPTable(1);
+            outer.setWidthPercentage(100);
+
+            PdfPCell outerCell = new PdfPCell();
+            outerCell.setBorder(Rectangle.BOX);
+            outerCell.setBorderColor(BLACK);
+            outerCell.setBorderWidth(1.2f);
+            outerCell.setPadding(0f);
+
+            // ── Header: name+address left | BILL centred right ──
             PdfPTable hdr = new PdfPTable(2);
             hdr.setWidthPercentage(100);
             hdr.setWidths(new float[]{ 60f, 40f });
-            hdr.setSpacingAfter(24f);
 
             PdfPCell lc = new PdfPCell();
             lc.setBorder(Rectangle.BOTTOM | Rectangle.RIGHT);
@@ -120,24 +130,24 @@ public class PdfServiceImpl implements PdfService {
             rc.addElement(pDate);
 
             hdr.addCell(rc);
-            doc.add(hdr);
+            outerCell.addElement(hdr);
 
+            // ── M/s line ──
             PdfPTable msTable = new PdfPTable(1);
             msTable.setWidthPercentage(100);
-            msTable.setSpacingAfter(28f);
             PdfPCell msCell = new PdfPCell();
             msCell.setBorder(Rectangle.BOTTOM);
             msCell.setBorderColor(BLACK);
             msCell.setPadding(14f);
             msCell.addElement(new Paragraph("M/s.   " + invoice.getClient().getClientName(), fMs));
             msTable.addCell(msCell);
-            doc.add(msTable);
+            outerCell.addElement(msTable);
 
+            // ── Services table ──
             if (!items.isEmpty()) {
                 PdfPTable table = new PdfPTable(2);
                 table.setWidthPercentage(100);
                 table.setWidths(new float[]{ 75f, 25f });
-                table.setSpacingAfter(28f);
                 table.setHeaderRows(1);
 
                 PdfPCell th1 = headerCell("DESCRIPTION OF SERVICE", fThHead, Element.ALIGN_LEFT);
@@ -152,9 +162,22 @@ public class PdfServiceImpl implements PdfService {
                     table.addCell(bodyCell(label,  fTbBody, Element.ALIGN_LEFT));
                     table.addCell(bodyCell(amount, fTbBody, Element.ALIGN_RIGHT));
                 }
-                doc.add(table);
+                outerCell.addElement(table);
+            } else {
+                PdfPTable emptyTable = new PdfPTable(1);
+                emptyTable.setWidthPercentage(100);
+                PdfPCell emptyCell = new PdfPCell(new Phrase("No services listed", fTbBody));
+                emptyCell.setBorder(Rectangle.BOX);
+                emptyCell.setBorderColor(MID_GREY);
+                emptyCell.setPadding(14f);
+                emptyCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+                emptyTable.addCell(emptyCell);
+                outerCell.addElement(emptyTable);
             }
 
+            outerCell.addElement(gap(10f));
+
+            // ── Totals ──
             BigDecimal total = invoice.getTotalAmount() != null
                     ? invoice.getTotalAmount() : BigDecimal.ZERO;
             String totalStr = RS + "  " + formatAmount(total);
@@ -163,7 +186,6 @@ public class PdfServiceImpl implements PdfService {
             PdfPTable totals = new PdfPTable(2);
             totals.setWidthPercentage(100);
             totals.setWidths(new float[]{ 58f, 42f });
-            totals.setSpacingAfter(32f);
 
             PdfPCell wordsCell = new PdfPCell();
             wordsCell.setBorder(Rectangle.BOX);
@@ -184,11 +206,12 @@ public class PdfServiceImpl implements PdfService {
             totalCell.addElement(pTotal);
             totals.addCell(totalCell);
 
-            doc.add(totals);
+            outerCell.addElement(totals);
+            outerCell.addElement(gap(10f));
 
+            // ── Bank details ──
             PdfPTable bankTable = new PdfPTable(1);
             bankTable.setWidthPercentage(100);
-            bankTable.setSpacingAfter(48f);
 
             PdfPCell bankOuter = new PdfPCell();
             bankOuter.setBorder(Rectangle.BOX);
@@ -200,27 +223,28 @@ public class PdfServiceImpl implements PdfService {
 
             PdfPTable bankGrid = new PdfPTable(1);
             bankGrid.setWidthPercentage(100);
-
             bankGrid.addCell(bankDetailCell("Account Name", nz(profile.getBankAccountName()), fBankLbl, fBank));
-
             bankOuter.addElement(bankGrid);
-            bankTable.addCell(bankOuter);
-            doc.add(bankTable);
 
+            bankTable.addCell(bankOuter);
+            outerCell.addElement(bankTable);
+            outerCell.addElement(gap(20f));
+
+            // ── Authorised Signatory ──
             PdfPTable sigTable = new PdfPTable(2);
             sigTable.setWidthPercentage(100);
             sigTable.setWidths(new float[]{ 50f, 50f });
 
             PdfPCell leftBlank = new PdfPCell(new Phrase(" "));
             leftBlank.setBorder(Rectangle.NO_BORDER);
-            leftBlank.setMinimumHeight(100f);
+            leftBlank.setMinimumHeight(90f);
             sigTable.addCell(leftBlank);
 
             PdfPCell sigCell = new PdfPCell();
             sigCell.setBorder(Rectangle.BOX);
             sigCell.setBorderColor(BLACK);
             sigCell.setPadding(14f);
-            sigCell.setMinimumHeight(100f);
+            sigCell.setMinimumHeight(90f);
             sigCell.setVerticalAlignment(Element.ALIGN_BOTTOM);
 
             Paragraph sigLabel = new Paragraph("Authorised Signatory", fSigLbl);
@@ -228,7 +252,10 @@ public class PdfServiceImpl implements PdfService {
             sigCell.addElement(sigLabel);
 
             sigTable.addCell(sigCell);
-            doc.add(sigTable);
+            outerCell.addElement(sigTable);
+
+            outer.addCell(outerCell);
+            doc.add(outer);
 
             doc.close();
 
