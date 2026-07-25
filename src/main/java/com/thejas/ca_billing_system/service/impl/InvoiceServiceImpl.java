@@ -5,12 +5,14 @@ import com.thejas.ca_billing_system.dto.InvoiceResponse;
 import com.thejas.ca_billing_system.entity.Client;
 import com.thejas.ca_billing_system.entity.Invoice;
 import com.thejas.ca_billing_system.enums.InvoiceStatus;
+import com.thejas.ca_billing_system.exception.InvoiceHasItemsException;
 import com.thejas.ca_billing_system.exception.ResourceNotFoundException;
 import com.thejas.ca_billing_system.repository.ClientRepository;
 import com.thejas.ca_billing_system.repository.InvoiceRepository;
 import com.thejas.ca_billing_system.security.SecurityHelper;
 import com.thejas.ca_billing_system.service.InvoiceService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -86,7 +88,13 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     public void deleteInvoice(Long invoiceId) {
-        invoiceRepository.delete(findOwnedInvoice(invoiceId));
+        Invoice invoice = findOwnedInvoice(invoiceId);
+        try {
+            invoiceRepository.delete(invoice);
+        } catch (DataIntegrityViolationException e) {
+            throw new InvoiceHasItemsException(
+                    "This invoice still has line items. Delete those first, then delete the invoice.");
+        }
     }
 
     private Invoice findOwnedInvoice(Long invoiceId) {
