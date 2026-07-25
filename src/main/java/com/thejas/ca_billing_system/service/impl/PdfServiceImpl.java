@@ -77,12 +77,12 @@ public class PdfServiceImpl implements PdfService {
             PdfPTable hdr = new PdfPTable(2);
             hdr.setWidthPercentage(100);
             hdr.setWidths(new float[]{ 60f, 40f });
-            hdr.setSpacingAfter(4f);
+            hdr.setSpacingAfter(24f);
 
             PdfPCell lc = new PdfPCell();
             lc.setBorder(Rectangle.BOTTOM | Rectangle.RIGHT);
             lc.setBorderColor(BLACK);
-            lc.setPadding(10f);
+            lc.setPadding(14f);
             lc.addElement(new Paragraph(profile.getFirmName(), fName));
             lc.addElement(gap(3f));
             if (notBlank(profile.getAddressLine1()))
@@ -98,7 +98,7 @@ public class PdfServiceImpl implements PdfService {
             PdfPCell rc = new PdfPCell();
             rc.setBorder(Rectangle.BOTTOM);
             rc.setBorderColor(BLACK);
-            rc.setPadding(10f);
+            rc.setPadding(14f);
             rc.setHorizontalAlignment(Element.ALIGN_CENTER);
             rc.setVerticalAlignment(Element.ALIGN_MIDDLE);
 
@@ -124,11 +124,11 @@ public class PdfServiceImpl implements PdfService {
 
             PdfPTable msTable = new PdfPTable(1);
             msTable.setWidthPercentage(100);
-            msTable.setSpacingAfter(6f);
+            msTable.setSpacingAfter(28f);
             PdfPCell msCell = new PdfPCell();
             msCell.setBorder(Rectangle.BOTTOM);
             msCell.setBorderColor(BLACK);
-            msCell.setPadding(7f);
+            msCell.setPadding(14f);
             msCell.addElement(new Paragraph("M/s.   " + invoice.getClient().getClientName(), fMs));
             msTable.addCell(msCell);
             doc.add(msTable);
@@ -137,7 +137,7 @@ public class PdfServiceImpl implements PdfService {
                 PdfPTable table = new PdfPTable(2);
                 table.setWidthPercentage(100);
                 table.setWidths(new float[]{ 75f, 25f });
-                table.setSpacingAfter(0f);
+                table.setSpacingAfter(28f);
                 table.setHeaderRows(1);
 
                 PdfPCell th1 = headerCell("DESCRIPTION OF SERVICE", fThHead, Element.ALIGN_LEFT);
@@ -163,12 +163,12 @@ public class PdfServiceImpl implements PdfService {
             PdfPTable totals = new PdfPTable(2);
             totals.setWidthPercentage(100);
             totals.setWidths(new float[]{ 58f, 42f });
-            totals.setSpacingAfter(18f);
+            totals.setSpacingAfter(32f);
 
             PdfPCell wordsCell = new PdfPCell();
             wordsCell.setBorder(Rectangle.BOX);
             wordsCell.setBorderColor(BLACK);
-            wordsCell.setPadding(7f);
+            wordsCell.setPadding(14f);
             wordsCell.addElement(new Paragraph("Rs. in Words :", fLbl));
             wordsCell.addElement(gap(3f));
             wordsCell.addElement(new Paragraph(inWords, fWords));
@@ -177,7 +177,7 @@ public class PdfServiceImpl implements PdfService {
             PdfPCell totalCell = new PdfPCell();
             totalCell.setBorder(Rectangle.BOX);
             totalCell.setBorderColor(BLACK);
-            totalCell.setPadding(7f);
+            totalCell.setPadding(14f);
             totalCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
             Paragraph pTotal = new Paragraph("TOTAL :   " + totalStr, fTotal);
             pTotal.setAlignment(Element.ALIGN_RIGHT);
@@ -188,12 +188,12 @@ public class PdfServiceImpl implements PdfService {
 
             PdfPTable bankTable = new PdfPTable(1);
             bankTable.setWidthPercentage(100);
-            bankTable.setSpacingAfter(18f);
+            bankTable.setSpacingAfter(48f);
 
             PdfPCell bankOuter = new PdfPCell();
             bankOuter.setBorder(Rectangle.BOX);
             bankOuter.setBorderColor(BLACK);
-            bankOuter.setPadding(8f);
+            bankOuter.setPadding(14f);
 
             bankOuter.addElement(new Paragraph("Bank Account Details", fBankLbl));
             bankOuter.addElement(gap(4f));
@@ -213,14 +213,14 @@ public class PdfServiceImpl implements PdfService {
 
             PdfPCell leftBlank = new PdfPCell(new Phrase(" "));
             leftBlank.setBorder(Rectangle.NO_BORDER);
-            leftBlank.setMinimumHeight(70f);
+            leftBlank.setMinimumHeight(100f);
             sigTable.addCell(leftBlank);
 
             PdfPCell sigCell = new PdfPCell();
             sigCell.setBorder(Rectangle.BOX);
             sigCell.setBorderColor(BLACK);
-            sigCell.setPadding(8f);
-            sigCell.setMinimumHeight(70f);
+            sigCell.setPadding(14f);
+            sigCell.setMinimumHeight(100f);
             sigCell.setVerticalAlignment(Element.ALIGN_BOTTOM);
 
             Paragraph sigLabel = new Paragraph("Authorised Signatory", fSigLbl);
